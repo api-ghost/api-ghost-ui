@@ -3,18 +3,18 @@ import ReactFlow, { MarkerType, Edge, Node, MiniMap } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useFlowCanvas } from '@/pages/flow-canvas/hooks/useFlowCanvas';
 import CustomNode from '@/pages/flow-canvas/components/custom-node/CustomNode';
-import { MappingModal } from '@/pages/flow-canvas/components/mapping-modal/MappingModal';
 import styles from './styles/FlowCanvas.module.scss';
 import { MockApiModal } from '@/pages/flow-canvas/components/mock-api-modal/MockApiModal';
 import { useAppSelector } from '@/store/hooks';
 import { scenarioTest } from '@/pages/flow-canvas/service/scenarioService';
 import { scenarioToFlowElements } from '@/common/utils/scenarioToReactFlow';
 import { useScenario } from '@/pages/flow-canvas/hooks/useScenario';
-import SaveButton from '@/common/components/SaveButton';
 import PlayButton from '@/common/components/PlayButton';
 import CustomEdge from '@/pages/flow-canvas/components/custom-node/CustomEdge';
 import { NODE, EDGE } from '@/config/reactFlow';
 import ScenarioNode from '@/pages/flow-canvas/components/custom-node/ScenarioNode';
+import SaveForm from '@/pages/flow-canvas/components/save-form/SaveForm';
+import EdgeModal from '@/pages/flow-canvas/components/custom-node/EdgeModal';
 
 const nodeTypes = { endpointNode: CustomNode, mockNode: CustomNode, scenarioNode: ScenarioNode };
 const edgeTypes = { flowCanvasEdge: CustomEdge };
@@ -39,16 +39,19 @@ const FlowCanvas: React.FC = () => {
     setNodes,
   } = useFlowCanvas();
 
-  const [showMappingModal, setShowMappingModal] = useState<boolean>(false);
-  const { saveScenario } = useScenario();
+  const { autoSave } = useScenario();
 
   const [currentEdge, setCurrentEdge] = useState<Edge | null>(null);
 
   const [showMockApiModal, setShowMockApiModal] = useState<boolean>(false);
 
-  const handleEdgeDoubleClick = (_: React.MouseEvent, edge: Edge) => {
+  const [isEdgeModalOpen, setEdgeModalOpen] = useState(false);
+
+  const handleEdgeDoubleClick = (e: React.MouseEvent, edge: Edge) => {
+    e.preventDefault();
+    e.stopPropagation();
     setCurrentEdge(edge);
-    setShowMappingModal(true);
+    setEdgeModalOpen(true);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -72,24 +75,21 @@ const FlowCanvas: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   const handlePlay = (fileName: string | undefined) => {
-    console.log('hihihihi');
     if (!fileName) {
-      console.log('heelo!!');
       return;
     }
+    const ok = autoSave(selectedScenario);
     if (isConnected) {
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
       setIsConnected(false);
     } else {
-      const eventSource = scenarioTest(fileName);
-      console.log(fileName);
+      const eventSource = scenarioTest(fileName + '.yaml');
       eventSourceRef.current = eventSource;
       setIsConnected(true);
 
       eventSource.addEventListener('stepResult', event => {
         const data = JSON.parse(event.data);
-        console.log(data);
       });
 
       eventSource.addEventListener('complete', event => {
@@ -147,14 +147,14 @@ const FlowCanvas: React.FC = () => {
           <MiniMap nodeColor={nodeColor} nodeStrokeWidth={3} zoomable pannable />
         </ReactFlow>
 
-        {showMappingModal && currentEdge && (
-          <MappingModal
-            closeModal={() => setShowMappingModal(false)}
-            edge={currentEdge}
-            nodes={nodes}
+        {isEdgeModalOpen && currentEdge && (
+          <EdgeModal
+            edgeInfo={currentEdge}
             setEdges={setEdges}
+            onClose={() => setEdgeModalOpen(false)}
           />
         )}
+
         {showMockApiModal && (
           <MockApiModal onConfirm={addNode} closeModal={() => setShowMockApiModal(false)} />
         )}
