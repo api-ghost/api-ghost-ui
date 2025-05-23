@@ -7,6 +7,8 @@ import {
   CreateLoadTestRequest,
 } from '@/pages/loadtest/types';
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 export const getLoadTestParamNameList = async (): Promise<LoadTestParamName[]> => {
   const response: LoadTestParamNameResponse = await apiClient.get('/apighost/loadtest-list');
   return response.loadTestParamNameList;
@@ -33,6 +35,6 @@ export const executeLoadTestParamInfo = async (
 };
 
 export const getEventSource = (name: string): EventSource => {
-  const fullUrl = `/apighost/loadtest-execute?loadTestParam=${name}`;
+  const fullUrl = `${baseUrl}/apighost/loadtest-execute?loadTestParam=${name}`;
   return new EventSource(fullUrl);
 };

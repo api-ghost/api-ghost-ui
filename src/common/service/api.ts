@@ -1,7 +1,7 @@
 import { HttpMethod, RequestOptions } from '@/common/types';
 import { buildQueryString, buildHeaders, buildFetchOptions } from '@/common/utils/apiUtils';
 
-let baseUrl = '';
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const request = async <T = any>(
   url: string,

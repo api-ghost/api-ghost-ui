@@ -1,9 +1,5 @@
-import {
-  Snapshot,
-  HttpReqDuration,
-  AggregatedResult,
-  EndpointResult,
-} from '@/pages/loadtest/types';
+import { Snapshot, HttpReqDuration, EndpointResult } from '@/pages/loadtest/types';
+import { CHART_OPTIONS } from '@/pages/loadtest/config/chartJS';
 
 export interface ParsedSnapshot {
   timestamp: string;
@@ -58,8 +54,8 @@ export const getDoughnutChartData = (snapshot: Snapshot) => {
     datasets: [
       {
         data: [success, failure],
-        backgroundColor: ['#4CAF50', '#F44336'],
-        hoverBackgroundColor: ['#45a049', '#e53935'],
+        backgroundColor: CHART_OPTIONS.doughnut.color.backgroundColor,
+        hoverBackgroundColor: CHART_OPTIONS.doughnut.color.hoverBackgroundColor,
         borderWidth: 1,
       },
     ],
@@ -74,20 +70,8 @@ export const getBarChartData = (duration: HttpReqDuration | undefined) => {
       {
         label: 'Response Time (ms)',
         data: [duration.min, duration.med, duration['p(90)'], duration['p(95)'], duration.max],
-        backgroundColor: [
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(255, 159, 64, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
-        ],
-        borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(255, 159, 64, 1)',
-          'rgba(255, 99, 132, 1)',
-        ],
+        backgroundColor: CHART_OPTIONS.bar.color.backgroundColor,
+        borderColor: CHART_OPTIONS.bar.color.borderColor,
         borderWidth: 1,
       },
     ],
@@ -96,6 +80,7 @@ export const getBarChartData = (duration: HttpReqDuration | undefined) => {
 
 export const getLineChartData = (metricType: string, timeline: ParsedSnapshot[]) => {
   const labels = timeline.map(item => item.timestamp);
+  const tension = 0.4;
 
   switch (metricType) {
     case 'vus':
@@ -105,17 +90,17 @@ export const getLineChartData = (metricType: string, timeline: ParsedSnapshot[])
           {
             label: 'Virtual Users',
             data: timeline.map(item => item.vus),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.4,
+            borderColor: CHART_OPTIONS.line.color.vus.color,
+            backgroundColor: CHART_OPTIONS.line.color.vus.bg,
+            tension,
             fill: true,
           },
           {
             label: 'Requests Per Second',
             data: timeline.map(item => item.rps),
-            borderColor: 'rgba(54, 162, 235, 1)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            tension: 0.4,
+            borderColor: CHART_OPTIONS.line.color.rps.color,
+            backgroundColor: CHART_OPTIONS.line.color.rps.bg,
+            tension,
             fill: true,
           },
         ],
@@ -128,17 +113,17 @@ export const getLineChartData = (metricType: string, timeline: ParsedSnapshot[])
           {
             label: 'Error Rate',
             data: timeline.map(item => item.failRate * 100), // Convert to percentage
-            borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            tension: 0.4,
+            borderColor: CHART_OPTIONS.line.color.errorRate.color,
+            backgroundColor: CHART_OPTIONS.line.color.errorRate.bg,
+            tension,
             fill: true,
           },
           {
             label: 'Checks Rate',
             data: timeline.map(item => item.checksRate),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.4,
+            borderColor: CHART_OPTIONS.line.color.checksRate.color,
+            backgroundColor: CHART_OPTIONS.line.color.checksRate.bg,
+            tension,
             fill: true,
           },
         ],
@@ -151,30 +136,30 @@ export const getLineChartData = (metricType: string, timeline: ParsedSnapshot[])
           {
             label: 'Avg Duration',
             data: timeline.map(item => item.avgDuration),
-            borderColor: 'rgba(54, 162, 235, 1)',
+            borderColor: CHART_OPTIONS.line.color.durations.avg,
             backgroundColor: 'transparent',
-            tension: 0.4,
+            tension,
           },
           {
             label: 'Median',
             data: timeline.map(item => item.medDuration),
-            borderColor: 'rgba(75, 192, 192, 1)',
+            borderColor: CHART_OPTIONS.line.color.durations.med,
             backgroundColor: 'transparent',
-            tension: 0.4,
+            tension,
           },
           {
             label: 'P90',
             data: timeline.map(item => item.p90Duration),
-            borderColor: 'rgba(255, 206, 86, 1)',
+            borderColor: CHART_OPTIONS.line.color.durations.p90,
             backgroundColor: 'transparent',
-            tension: 0.4,
+            tension,
           },
           {
             label: 'P95',
             data: timeline.map(item => item.p95Duration),
-            borderColor: 'rgba(255, 99, 132, 1)',
+            borderColor: CHART_OPTIONS.line.color.durations.p95,
             backgroundColor: 'transparent',
-            tension: 0.4,
+            tension,
           },
         ],
       };
