@@ -39,7 +39,7 @@ const FlowCanvasMain: React.FC = () => {
   };
 
   useEffect(() => {
-    getScenarioList()
+    const a = getScenarioList()
       .then(names => dispatch(setScenarioList(names)))
       .catch(err => addToast('Failed to load the scenario list.', 4000));
   }, [dispatch]);

@@ -8,6 +8,7 @@ import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { setNodeTab } from '@/store/slices/nodeTabSlice';
 import { useFlowCanvas } from '@/pages/flow-canvas/hooks/useFlowCanvas';
 import { useNodeControls } from '@/pages/flow-canvas/hooks/useCustomNode';
+import { toggleShowBody, updateNodePath, updateNodeSchema } from '@/store/slices/flowSlice';
 
 const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, type }) => {
   const { updateNode, setNodes } = useFlowCanvas();
@@ -50,7 +51,7 @@ const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, t
 
   const handlePathBlur = () => {
     const newPath = tempPath.trim();
-    savePath(newPath);
+    dispatch(updateNodePath({ nodeId: id, path: newPath }));
     setIsEditingPath(false);
   };
 
@@ -61,28 +62,21 @@ const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, t
 
   const handleToggleBody = (e?: MouseEvent) => {
     if (e) e.stopPropagation();
-    setNodes(nodes =>
-      nodes.map(n => (n.id === id ? { ...n, data: { ...n.data, showBody: !showBody } } : n)),
-    );
+    dispatch(toggleShowBody(id));
   };
 
   const handleSave = (request: string, response: string, updatedHeader?: string) => {
     save(MainTabType.REQUEST, request);
     save(MainTabType.RESPONSE, response);
 
-    const updatedNode = {
-      id,
-      type: 'endpointNode',
-      position: { x: xPos, y: yPos },
-      data: {
-        ...data,
+    dispatch(
+      updateNodeSchema({
+        nodeId: id,
         requestSchema: request,
         responseSchema: response,
         header: updatedHeader,
-        showBody: false,
-      } as NodeEndPoint,
-    };
-    updateNode(updatedNode);
+      }),
+    );
   };
 
   const isPassStyle = pass === true ? 'success' : '';
