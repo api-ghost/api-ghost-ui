@@ -13,40 +13,36 @@ import { useScenario } from '@/pages/flow-canvas/hooks/useScenario';
 import foldIcon from '@/assets/icons/fold.svg';
 import deleteIcon from '@/assets/icons/delete.svg';
 import createIcon from '@/assets/icons/create.svg';
+import { useToast } from '@/common/components/toast/ToastContext';
 
 const FlowCanvasMain: React.FC = () => {
   const dispatch = useAppDispatch();
   const scenarios = useAppSelector(state => state.scenario.list);
-  const selected = useAppSelector(state => state.scenario.selected);
+  const selectedScenario = useAppSelector(state => state.scenario.selected);
   const { autoSave, removeScenario, createScenario } = useScenario();
-
+  const { addToast } = useToast();
   const handleSelect = async (name: string) => {
-    if (selected) {
-      const ok = await autoSave(selected);
+    if (selectedScenario) {
+      const ok = await autoSave(selectedScenario);
     }
     const info = await getScenarioInfo(name);
-    console.log('newFile Name: ', name);
     dispatch(selectScenario(info));
   };
 
   const handleRemove = async (name: string) => {
-    if (selected?.name === name) {
+    if (selectedScenario?.name === name) {
       removeScenario();
     } else {
-      alert('select file first');
+      addToast('select file first', 4000);
       return;
     }
   };
 
   useEffect(() => {
-    getScenarioList()
+    const a = getScenarioList()
       .then(names => dispatch(setScenarioList(names)))
-      .catch(err => console.error('[FlowCanvasMain] getScenarioList Error', err));
+      .catch(err => addToast('Failed to load the scenario list.', 4000));
   }, [dispatch]);
-
-  useEffect(() => {
-    console.log('[FlowCanvasMain] selected scenario changed →', selected);
-  }, [selected]);
 
   return (
     <ReactFlowProvider>
@@ -66,8 +62,8 @@ const FlowCanvasMain: React.FC = () => {
                     </button>
                     <button
                       className={styles.deleteButton}
-                      onClick={() => handleRemove(selected?.name ?? '')}
-                      disabled={!selected}
+                      onClick={() => handleRemove(selectedScenario?.name ?? '')}
+                      disabled={!selectedScenario}
                     >
                       <img src={deleteIcon} alt="delete Scenario" width={24} height={24} />
                     </button>
@@ -77,14 +73,14 @@ const FlowCanvasMain: React.FC = () => {
               content: (
                 <ScenarioList
                   scenarios={scenarios}
-                  selectedScenario={(selected?.name ?? '') + '.yaml'}
+                  selectedScenario={(selectedScenario?.name ?? '') + '.yaml'}
                   onSelect={handleSelect}
                 />
               ),
             },
           ]}
         />
-        <div className={styles.flex}>{selected ? <FlowCanvas /> : <WelcomePage />}</div>
+        <div className={styles.flex}>{selectedScenario ? <FlowCanvas /> : <WelcomePage />}</div>
       </div>
     </ReactFlowProvider>
   );

@@ -6,65 +6,82 @@ import { RequestBody } from '@/common/types';
 import { MainTabType, SubTabType } from '@/pages/flow-canvas/types';
 import RenderHeaderInputTable from './RenderHeaderInputTable';
 import JsonToggleField from './JsonToggleField';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setShowBodyVisibility, updateNodeSchema } from '@/store/slices/flowSlice';
+import { setNodeTab } from '@/store/slices/nodeTabSlice';
 
 interface ScenarioNodeBodyProps {
-  requestSchema: RequestBody;
-  responseSchema: string;
-  initialMainTabLabel?: MainTabType;
-  initialSubTabLabel?: SubTabType;
-  onTabChange?: (main: MainTabType, sub: SubTabType) => void;
-  onSaveData: (request: RequestBody, response: string, newHeader?: string) => void;
-  onClose: () => void;
-  header?: string;
+  nodeId: string;
 }
 
-const ScenarioNodeBody: React.FC<ScenarioNodeBodyProps> = ({
-  requestSchema,
-  responseSchema,
-  initialMainTabLabel,
-  initialSubTabLabel,
-  onTabChange,
-  onClose,
-  onSaveData,
-  header = '',
-}) => {
-  const { mainTab, subTab, availableSubTabs, selectMainTab, selectSubTab } =
-    useBodyEditorController(BODY_EDITOR_TABS, initialMainTabLabel, initialSubTabLabel);
+const ScenarioNodeBody: React.FC<ScenarioNodeBodyProps> = ({ nodeId }) => {
+  const dispatch = useAppDispatch();
+  const node = useAppSelector(state => state.flow.nodes.find(n => n.id === nodeId));
+  const tab = useAppSelector(state => state.nodeTab[nodeId]) ?? {
+    mainTab: MainTabType.REQUEST,
+    subTab: SubTabType.HEADER,
+  };
+  const [reqSchema, setReqSchema] = useState<RequestBody>({ json: '' });
+  const [resSchema, setResSchema] = useState<string>('');
+  const [header, setHeader] = useState<string>('');
 
-  const [requestHeader, setRequestHeader] = useState<string>(header);
-  const [reqSchema, setReqSchema] = useState<RequestBody>(requestSchema);
-  const [resSchema, setResSchema] = useState<string>(responseSchema);
+  const { mainTab, subTab, selectMainTab, selectSubTab, availableSubTabs } =
+    useBodyEditorController(BODY_EDITOR_TABS, tab.mainTab, tab.subTab);
 
   useEffect(() => {
-    setReqSchema(requestSchema);
-  }, [JSON.stringify(requestSchema)]);
+    if (!node?.data) return;
+    const raw = node.data.requestSchema as any;
+    if (typeof raw === 'string') {
+      setReqSchema({ json: raw });
+    } else if (raw && typeof raw.json === 'string') {
+      setReqSchema({ json: raw.json });
+    } else {
+      setReqSchema({ json: '' });
+    }
+    setResSchema(node.data.responseSchema ?? '');
+    setHeader(node.data.header ?? '');
+  }, [JSON.stringify(node?.data)]);
 
-  useEffect(() => {
-    setResSchema(responseSchema);
-  }, [JSON.stringify(responseSchema)]);
+  const handleSave = () => {
+    dispatch(
+      updateNodeSchema({
+        nodeId,
+        requestSchema: reqSchema.json || '',
+        responseSchema: resSchema,
+        header: header,
+      }),
+    );
+    dispatch(setShowBodyVisibility({ nodeId, visible: false }));
+  };
 
-  const isRequestTab = mainTab.label === BODY_EDITOR_TABS[0].mainTab.label;
+  const handleClose = () => {
+    dispatch(setShowBodyVisibility({ nodeId, visible: false }));
+  };
 
   const handleMainTab = (tab: Tab) => {
     selectMainTab(tab);
-    if (onTabChange) onTabChange(tab.label as MainTabType, subTab.label as SubTabType);
+    dispatch(
+      setNodeTab({ nodeId, mainTab: tab.label as MainTabType, subTab: subTab.label as SubTabType }),
+    );
   };
 
   const handleSubTab = (tab: Tab) => {
     selectSubTab(tab);
-    if (onTabChange) onTabChange(mainTab.label as MainTabType, tab.label as SubTabType);
+    dispatch(
+      setNodeTab({
+        nodeId,
+        mainTab: mainTab.label as MainTabType,
+        subTab: tab.label as SubTabType,
+      }),
+    );
   };
 
   const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-  const handleSave = () => {
-    onSaveData(reqSchema, resSchema, requestHeader);
-    onClose();
-  };
-
   const updateRequestJson = (updated: string) => {
-    setReqSchema(prev => ({ ...prev, json: updated }));
+    setReqSchema({ json: updated });
   };
+  if (!node?.data) return null;
 
   return (
     <div className={styles.editorPopover} onClick={stopPropagation}>
@@ -95,25 +112,16 @@ const ScenarioNodeBody: React.FC<ScenarioNodeBodyProps> = ({
       </nav>
 
       {subTab.label === SubTabType.HEADER && (
-        <RenderHeaderInputTable header={requestHeader} onChange={setRequestHeader} />
+        <RenderHeaderInputTable header={header} onChange={setHeader} />
       )}
       {subTab.showSchema && (
         <section className={styles.contentArea}>
-          {/* {isRequestTab ? ( */}
           <JsonToggleField
-            initialJson={requestSchema?.json ?? ''}
+            initialJson={reqSchema.json ?? ''}
             defaultToJson={true}
             editable={true}
             onChange={updateRequestJson}
           />
-          {/* :
-           (
-            <JsonToggleField
-              initialJson={responseSchema}
-              defaultToJson={true}
-              onChange={setResSchema}
-            />
-          ) */}
         </section>
       )}
 
@@ -123,7 +131,7 @@ const ScenarioNodeBody: React.FC<ScenarioNodeBodyProps> = ({
             Save
           </button>
         }
-        <button className={styles.closeButton} onClick={onClose}>
+        <button className={styles.closeButton} onClick={handleClose}>
           Close
         </button>
       </footer>

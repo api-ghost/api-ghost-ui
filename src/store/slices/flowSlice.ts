@@ -32,8 +32,69 @@ const flowSlice = createSlice({
       state.nodes = [];
       state.edges = [];
     },
+
+    toggleShowBody: (state, action: PayloadAction<string>) => {
+      const node = state.nodes.find(n => n.id === action.payload);
+      if (node && node.data) {
+        node.data = {
+          ...node.data,
+          showBody: !node.data.showBody,
+        };
+      }
+    },
+
+    setShowBodyVisibility(state, action: PayloadAction<{ nodeId: string; visible: boolean }>) {
+      const node = state.nodes.find(n => n.id === action.payload.nodeId);
+      if (node?.data) {
+        node.data = {
+          ...node?.data,
+          showBody: action.payload.visible,
+        };
+      }
+    },
+
+    updateNodePath: (state, action: PayloadAction<{ nodeId: string; path: string }>) => {
+      const { nodeId, path } = action.payload;
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (node && node.data) {
+        node.data = {
+          ...node.data,
+          path,
+        };
+      }
+    },
+    updateNodeSchema: (
+      state,
+      action: PayloadAction<{
+        nodeId: string;
+        requestSchema: string;
+        responseSchema: string;
+        header?: string;
+      }>,
+    ) => {
+      const { nodeId, requestSchema, responseSchema, header } = action.payload;
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (node && node.data) {
+        node.data = {
+          ...node.data,
+          requestSchema,
+          responseSchema,
+          header: header ?? node.data.header,
+          showBody: false,
+        };
+      }
+    },
   },
 });
 
-export const { setNodes, setEdges, resetFlow, updateNode } = flowSlice.actions;
+export const {
+  setNodes,
+  setEdges,
+  resetFlow,
+  updateNode,
+  toggleShowBody,
+  updateNodePath,
+  updateNodeSchema,
+  setShowBodyVisibility,
+} = flowSlice.actions;
 export default flowSlice.reducer;
