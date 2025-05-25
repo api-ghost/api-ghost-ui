@@ -24,7 +24,7 @@ export interface FlowStep {
     y: number;
   };
   request: HttpRequest;
-  route: FlowRoute[]; // 여러 루트가 존재 할 수 있으니까
+  route: FlowRoute[];
 }
 
 export interface FlowRoute {
