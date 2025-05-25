@@ -6,14 +6,10 @@ import { MainTabType, SubTabType, NodeEndPoint } from '@/pages/flow-canvas/types
 import { useSchemaEditor } from '@/pages/flow-canvas/hooks/useSchemaEditor';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { setNodeTab } from '@/store/slices/nodeTabSlice';
-import { useFlowCanvas } from '@/pages/flow-canvas/hooks/useFlowCanvas';
-import { useNodeControls } from '@/pages/flow-canvas/hooks/useCustomNode';
 import { toggleShowBody, updateNodePath, updateNodeSchema } from '@/store/slices/flowSlice';
 
 const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, type }) => {
-  const { updateNode, setNodes } = useFlowCanvas();
   const dispatch = useAppDispatch();
-  const { savePath } = useNodeControls(id);
   const {
     baseUrl,
     method,
@@ -68,7 +64,6 @@ const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, t
   const handleSave = (request: string, response: string, updatedHeader?: string) => {
     save(MainTabType.REQUEST, request);
     save(MainTabType.RESPONSE, response);
-
     dispatch(
       updateNodeSchema({
         nodeId: id,

@@ -58,8 +58,8 @@ const NodeBody: React.FC<NodeBodyProps> = ({
   const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
   const handleSave = () => {
-    onSaveData(reqSchema, resSchema, requestHeader);
     onClose();
+    onSaveData(reqSchema, resSchema, requestHeader);
   };
 
   return (
