@@ -32,6 +32,7 @@ const flowSlice = createSlice({
       state.nodes = [];
       state.edges = [];
     },
+
     toggleShowBody: (state, action: PayloadAction<string>) => {
       const node = state.nodes.find(n => n.id === action.payload);
       if (node && node.data) {
@@ -41,6 +42,17 @@ const flowSlice = createSlice({
         };
       }
     },
+
+    setShowBodyVisibility(state, action: PayloadAction<{ nodeId: string; visible: boolean }>) {
+      const node = state.nodes.find(n => n.id === action.payload.nodeId);
+      if (node?.data) {
+        node.data = {
+          ...node?.data,
+          showBody: action.payload.visible,
+        };
+      }
+    },
+
     updateNodePath: (state, action: PayloadAction<{ nodeId: string; path: string }>) => {
       const { nodeId, path } = action.payload;
       const node = state.nodes.find(n => n.id === nodeId);
@@ -61,7 +73,7 @@ const flowSlice = createSlice({
       }>,
     ) => {
       const { nodeId, requestSchema, responseSchema, header } = action.payload;
-      const node = state.nodes.find(n => n.id == nodeId);
+      const node = state.nodes.find(n => n.id === nodeId);
       if (node && node.data) {
         node.data = {
           ...node.data,
@@ -83,5 +95,6 @@ export const {
   toggleShowBody,
   updateNodePath,
   updateNodeSchema,
+  setShowBodyVisibility,
 } = flowSlice.actions;
 export default flowSlice.reducer;
