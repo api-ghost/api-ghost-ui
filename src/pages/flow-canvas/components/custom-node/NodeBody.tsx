@@ -6,61 +6,62 @@ import { MainTabType, SubTabType } from '@/pages/flow-canvas/types';
 import RenderJsonSchema from '@/pages/flow-canvas/components/custom-node/RenderJsonSchema';
 import RenderHeaderInputTable from './RenderHeaderInputTable';
 import JsonToggleField from '@/pages/flow-canvas/components/custom-node/JsonToggleField';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setShowBodyVisibility, updateNodeSchema } from '@/store/slices/flowSlice';
+import { setNodeTab } from '@/store/slices/nodeTabSlice';
 
 interface NodeBodyProps {
-  requestSchema: string;
-  responseSchema: string;
-  initialMainTabLabel?: MainTabType;
-  initialSubTabLabel?: SubTabType;
-  onTabChange?: (main: MainTabType, sub: SubTabType) => void;
-  onSaveData: (request: string, response: string, newHeader?: string) => void;
-  onClose: () => void;
-  header?: string;
+  nodeId: string;
 }
 
-const NodeBody: React.FC<NodeBodyProps> = ({
-  requestSchema,
-  responseSchema,
-  initialMainTabLabel,
-  initialSubTabLabel,
-  onTabChange,
-  onClose,
-  onSaveData,
-  header = '',
-}) => {
-  const { mainTab, subTab, availableSubTabs, selectMainTab, selectSubTab } =
-    useBodyEditorController(BODY_EDITOR_TABS, initialMainTabLabel, initialSubTabLabel);
+const NodeBody: React.FC<NodeBodyProps> = ({ nodeId }) => {
+  const dispatch = useAppDispatch();
+  const node = useAppSelector(state => state.flow.nodes.find(n => n.id === nodeId));
 
-  const [reqSchema, setReqSchema] = useState<string>(requestSchema);
-  const [resSchema, setResSchema] = useState<string>(responseSchema);
-  const [requestHeader, setRequestHeader] = useState<string>(header);
+  const currentTab = useAppSelector(state => state.nodeTab[nodeId]);
+  const mainTab = currentTab?.mainTab ?? MainTabType.REQUEST;
+  const subTab = currentTab?.subTab ?? SubTabType.HEADER;
+
+  const [reqSchema, setReqSchema] = useState('');
+  const [resSchema, setResSchema] = useState('');
+  const [header, setHeader] = useState('');
 
   useEffect(() => {
-    setReqSchema(requestSchema);
-  }, [JSON.stringify(requestSchema)]);
+    if (node?.data) {
+      setReqSchema(node.data.requestSchema ?? '');
+      setResSchema(node.data.responseSchema ?? '');
+      setHeader(node.data.header ?? '');
+    }
+  }, [JSON.stringify(node?.data)]);
 
-  useEffect(() => {
-    setResSchema(responseSchema);
-  }, [JSON.stringify(responseSchema)]);
-
-  const isRequestTab = mainTab.label === BODY_EDITOR_TABS[0].mainTab.label;
+  const handleSave = () => {
+    dispatch(
+      updateNodeSchema({
+        nodeId,
+        requestSchema: reqSchema,
+        responseSchema: resSchema,
+        header,
+      }),
+    );
+    dispatch(setShowBodyVisibility({ nodeId, visible: false }));
+  };
 
   const handleMainTab = (tab: Tab) => {
-    selectMainTab(tab);
-    if (onTabChange) onTabChange(tab.label as MainTabType, subTab.label as SubTabType);
+    const firstSub =
+      BODY_EDITOR_TABS.find(group => group.mainTab.label === tab.label)?.subTabs[0]?.label ??
+      SubTabType.HEADER;
+    dispatch(
+      setNodeTab({ nodeId, mainTab: tab.label as MainTabType, subTab: firstSub as SubTabType }),
+    );
   };
 
   const handleSubTab = (tab: Tab) => {
-    selectSubTab(tab);
-    if (onTabChange) onTabChange(mainTab.label as MainTabType, tab.label as SubTabType);
+    dispatch(setNodeTab({ nodeId, mainTab, subTab: tab.label as SubTabType }));
   };
 
   const stopPropagation = (e: MouseEvent) => e.stopPropagation();
-
-  const handleSave = () => {
-    onClose();
-    onSaveData(reqSchema, resSchema, requestHeader);
-  };
+  const isRequestTab = mainTab === MainTabType.REQUEST;
+  if (!node?.data) return null;
 
   return (
     <div className={styles.editorPopover} onClick={stopPropagation}>
@@ -68,9 +69,7 @@ const NodeBody: React.FC<NodeBodyProps> = ({
         {BODY_EDITOR_TABS.map(group => (
           <button
             key={group.mainTab.label}
-            className={`${styles.tab} ${
-              mainTab.label === group.mainTab.label ? styles.activeMainTab : ''
-            }`}
+            className={`${styles.tab} ${mainTab === group.mainTab.label ? styles.activeMainTab : ''}`}
             onClick={() => handleMainTab(group.mainTab)}
           >
             {group.mainTab.label}
@@ -79,21 +78,23 @@ const NodeBody: React.FC<NodeBodyProps> = ({
       </nav>
 
       <nav className={styles.subTabs}>
-        {availableSubTabs.map(tab => (
+        {BODY_EDITOR_TABS.find(group => group.mainTab.label === mainTab)?.subTabs.map(sub => (
           <button
-            key={tab.label}
-            className={`${styles.tab} ${subTab.label === tab.label ? styles.activeSubTab : ''}`}
-            onClick={() => handleSubTab(tab)}
+            key={sub.label}
+            className={`${styles.tab} ${subTab === sub.label ? styles.activeSubTab : ''}`}
+            onClick={() => handleSubTab(sub)}
           >
-            {tab.label}
+            {sub.label}
           </button>
         ))}
       </nav>
 
-      {subTab.label === SubTabType.HEADER && (
-        <RenderHeaderInputTable header={requestHeader} onChange={setRequestHeader} />
+      {subTab === SubTabType.HEADER && (
+        <RenderHeaderInputTable header={header} onChange={setHeader} />
       )}
-      {subTab.showSchema && (
+      {BODY_EDITOR_TABS.some(group =>
+        group.subTabs.find(t => t.label === subTab && t.showSchema),
+      ) && (
         <section className={styles.contentArea}>
           {isRequestTab ? (
             <JsonToggleField
@@ -114,12 +115,13 @@ const NodeBody: React.FC<NodeBodyProps> = ({
       )}
 
       <footer className={styles.buttonRow}>
-        {
-          <button className={styles.saveButton} onClick={handleSave}>
-            Save
-          </button>
-        }
-        <button className={styles.closeButton} onClick={onClose}>
+        <button className={styles.saveButton} onClick={handleSave}>
+          Save
+        </button>
+        <button
+          className={styles.closeButton}
+          onClick={() => dispatch(setShowBodyVisibility({ nodeId, visible: false }))}
+        >
           Close
         </button>
       </footer>

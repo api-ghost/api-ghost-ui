@@ -2,46 +2,36 @@ import React, { useEffect, MouseEvent, useState, useRef } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import NodeBody from '@/pages/flow-canvas/components/custom-node/NodeBody';
 import styles from '@/pages/flow-canvas/styles/CustomNode.module.scss';
-import { MainTabType, SubTabType, NodeEndPoint } from '@/pages/flow-canvas/types';
-import { useSchemaEditor } from '@/pages/flow-canvas/hooks/useSchemaEditor';
+import { NodeEndPoint } from '@/pages/flow-canvas/types';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { setNodeTab } from '@/store/slices/nodeTabSlice';
 import { toggleShowBody, updateNodePath, updateNodeSchema } from '@/store/slices/flowSlice';
 
-const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, type }) => {
+const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id }) => {
   const dispatch = useAppDispatch();
-  const {
-    baseUrl,
-    method,
-    path: initialPath,
-    showBody,
-    requestSchema: dataReq = '{}',
-    responseSchema: dataRes = '{}',
-    header: dataHeader = '',
-    isSuccess: pass = false,
-    isFail: nonPass = false,
-  } = data;
+  const node = useAppSelector(state => state.flow.nodes.find(n => n.id === id));
 
-  const { requestSchema, responseSchema, save } = useSchemaEditor(id, dataReq, dataRes);
+  const data = node?.data;
 
   const [isEditingPath, setIsEditingPath] = useState(false);
-  const [tempPath, setTempPath] = useState(initialPath);
+  const [tempPath, setTempPath] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setTempPath(initialPath);
-  }, [initialPath]);
+    if (!data) return;
+    setTempPath(data.path);
+  }, [data?.path]);
 
   useEffect(() => {
     if (isEditingPath && inputRef.current) {
-      inputRef.current.focus();
       const len = inputRef.current.value.length;
+      inputRef.current.focus();
       inputRef.current.setSelectionRange(len, len);
     }
   }, [isEditingPath]);
+  if (!data) return null;
 
-  const handleDoubleClickPath = (e: MouseEvent) => {
-    e.stopPropagation();
+  const handleDoubleClickPath = (e?: MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsEditingPath(true);
   };
 
@@ -51,31 +41,15 @@ const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, t
     setIsEditingPath(false);
   };
 
-  const savedTab = useAppSelector(state => state.nodeTab[id]) ?? {
-    mainTab: MainTabType.REQUEST,
-    subTab: SubTabType.BODY,
-  };
-
   const handleToggleBody = (e?: MouseEvent) => {
     if (e) e.stopPropagation();
     dispatch(toggleShowBody(id));
   };
 
-  const handleSave = (request: string, response: string, updatedHeader?: string) => {
-    save(MainTabType.REQUEST, request);
-    save(MainTabType.RESPONSE, response);
-    dispatch(
-      updateNodeSchema({
-        nodeId: id,
-        requestSchema: request,
-        responseSchema: response,
-        header: updatedHeader,
-      }),
-    );
-  };
+  const { baseUrl, method, isSuccess: pass, isFail: nonPass, showBody, type } = data;
 
-  const isPassStyle = pass === true ? 'success' : '';
-  const isFailStyle = nonPass === true ? 'fail' : '';
+  const isPassStyle = pass ? 'success' : '';
+  const isFailStyle = nonPass ? 'fail' : '';
   const isMockNode = type === 'mockNode';
 
   return (
@@ -107,36 +81,17 @@ const CustomNode: React.FC<NodeProps<NodeEndPoint>> = ({ id, data, xPos, yPos, t
             />
           ) : (
             <span className={styles.path} onDoubleClick={handleDoubleClickPath}>
-              {initialPath}
+              {data.path}
             </span>
           )}
-          <div
-            className={styles.menuIcon}
-            onClick={e => {
-              e.stopPropagation();
-              handleToggleBody();
-            }}
-          >
+          <div className={styles.menuIcon} onClick={handleToggleBody}>
             <span className={styles.line} />
             <span className={styles.line} />
             <span className={styles.line} />
           </div>
         </div>
 
-        {showBody && (
-          <NodeBody
-            requestSchema={requestSchema as string}
-            responseSchema={responseSchema as string}
-            initialMainTabLabel={savedTab.mainTab}
-            initialSubTabLabel={savedTab.subTab}
-            onTabChange={(main, sub) =>
-              dispatch(setNodeTab({ nodeId: id, mainTab: main, subTab: sub }))
-            }
-            onSaveData={handleSave}
-            onClose={handleToggleBody}
-            header={dataHeader}
-          />
-        )}
+        {showBody && <NodeBody nodeId={id} />}
       </div>
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <Handle type="source" position={Position.Right} className={styles.handle} />

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import styles from '@/pages/flow-canvas/styles/CustomNode.module.scss';
 import { MainTabType, SubTabType, NodeEndPoint } from '@/pages/flow-canvas/types';
@@ -8,32 +8,37 @@ import { useFlowCanvas } from '@/pages/flow-canvas/hooks/useFlowCanvas';
 import ScenarioNodeBody from './ScenarioNodeBody';
 import { RequestBody } from '@/common/types';
 import { useNodeControls } from '@/pages/flow-canvas/hooks/useCustomNode';
+import { toggleShowBody } from '@/store/slices/flowSlice';
 
-const ScenarioNode: React.FC<NodeProps> = ({ id, data, xPos, yPos, type }) => {
-  const { updateNode, setNodes } = useFlowCanvas();
+const ScenarioNode: React.FC<NodeProps> = ({ id }) => {
   const dispatch = useAppDispatch();
+  const node = useAppSelector(state => state.flow.nodes.find(n => n.id === id));
+  const data = node?.data;
+  const [tempPath, setTempPath] = useState<string>('');
+  useEffect(() => {
+    if (!data) return;
+    setTempPath(data.path);
+  }, [data?.path]);
+
   const { savePath } = useNodeControls(id);
 
-  const {
-    baseUrl,
-    method,
-    path: initialPath,
-    showBody,
-    requestSchema: dataReq = '',
-    responseSchema: dataRes = '',
-    header: dataHeader,
-    isSuccess: pass = false,
-    isFail: nonPass = false,
-  } = data;
-
-  const savedTab = useAppSelector(state => state.nodeTab[id]) ?? {
-    mainTab: MainTabType.REQUEST,
-    subTab: SubTabType.BODY,
-  };
-
   const [isEditingPath, setIsEditingPath] = useState(false);
-  const [tempPath, setTempPath] = useState(initialPath);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    setTempPath(data.path);
+  }, [data?.path]);
+
+  useEffect(() => {
+    if (isEditingPath && inputRef.current) {
+      const len = inputRef.current.value.length;
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(len, len);
+    }
+  }, [isEditingPath]);
+
+  if (!data) return null;
 
   const handleDoubleClickPath = (e: React.MouseEvent<HTMLSpanElement>) => {
     e.stopPropagation();
@@ -48,30 +53,13 @@ const ScenarioNode: React.FC<NodeProps> = ({ id, data, xPos, yPos, type }) => {
 
   const handleToggleBody = (e?: MouseEvent) => {
     if (e) e.stopPropagation();
-    setNodes(nodes =>
-      nodes.map(n => (n.id === id ? { ...n, data: { ...n.data, showBody: !showBody } } : n)),
-    );
+    dispatch(toggleShowBody(id));
   };
-
-  const handleSave = (request: RequestBody, response: string, updatedHeader?: string) => {
-    const updatedNode = {
-      id,
-      type: type,
-      position: { x: xPos, y: yPos },
-      data: {
-        ...data,
-        requestSchema: request,
-        responseSchema: response,
-        header: updatedHeader,
-        showBody: false,
-      },
-    };
-
-    updateNode(updatedNode);
-  };
+  const { baseUrl, method, isSuccess: pass, isFail: nonPass, showBody } = data;
 
   const isPassStyle = pass === true ? 'success' : '';
   const isFailStyle = nonPass === true ? 'fail' : '';
+
   return (
     <div className={styles.nodeWrapper}>
       <div className={`${styles.node} ${styles[method]}`}>
@@ -101,7 +89,7 @@ const ScenarioNode: React.FC<NodeProps> = ({ id, data, xPos, yPos, type }) => {
             />
           ) : (
             <span className={styles.path} onDoubleClick={handleDoubleClickPath}>
-              {initialPath}
+              {data.path}
             </span>
           )}
           <div
@@ -117,20 +105,7 @@ const ScenarioNode: React.FC<NodeProps> = ({ id, data, xPos, yPos, type }) => {
           </div>
         </div>
 
-        {showBody && (
-          <ScenarioNodeBody
-            requestSchema={dataReq}
-            responseSchema={dataRes}
-            initialMainTabLabel={savedTab.mainTab}
-            initialSubTabLabel={savedTab.subTab}
-            onTabChange={(main, sub) =>
-              dispatch(setNodeTab({ nodeId: id, mainTab: main, subTab: sub }))
-            }
-            onSaveData={handleSave}
-            onClose={handleToggleBody}
-            header={dataHeader}
-          />
-        )}
+        {showBody && <ScenarioNodeBody nodeId={id} />}
       </div>
       <Handle id="target" type="target" position={Position.Left} className={styles.handle} />
       <Handle id="source" type="source" position={Position.Right} className={styles.handle} />
